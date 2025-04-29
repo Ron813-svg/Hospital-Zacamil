@@ -1,62 +1,85 @@
 import jsonwebtoken from 'jsonwebtoken'
 import bcryptjs from 'bcryptjs'
-import nodemailer from 'nodemailer'
+
 import crypto from 'crypto'
 import registerModel from '../models/Doctor.js'
 import { config } from '../config.js'
-import { error } from 'console'
+
 import sendVerificationEmail from '../utils/verificationCode.js'
 
 const registerControl = {}
 
-registerControl.register = async (req,res) =>{
-    const { name, specialty, email, password} = req.body
-    try{
-        const existProfile = await registerModel.findOne({email})
+registerControl.register = async (req, res) => {
+    const { name, specialty, email, password } = req.body;
+    try {
+        const existProfile = await registerModel.findOne({ email });
 
-        if(existProfile){return res.status(400).json({message: "El email ya se encuentra registrado"})}
+        if (existProfile) {
+            return res.status(400).json({ message: "El email ya se encuentra registrado" });
+        }
 
-        const passwordHash = await bcryptjs.hash(password,10)
-        const newProfile = await registerModel({name, specialty, email, password: passwordHash})
-        await newProfile.save()
+        const passwordHash = await bcryptjs.hash(password, 10);
+        const newProfile = new registerModel({ name, specialty, email, password: passwordHash });
+        await newProfile.save();
 
-        const verificationCode = crypto.randomBytes(6).toString('hex')
+        const verificationCode = crypto.randomBytes(6).toString('hex');
+        console.log("Generated Verification Code:", verificationCode); 
 
         const tokenCode = jsonwebtoken.sign(
-            {email,verificationCode},
-            {expiresIn: '2h'}
-        )
-        res.cookie('VerificationToken', tokenCode, {maxAge: 2*60*60*1000})
+            { email, verificationCode },
+            config.JWT.secret, 
+            { expiresIn: '2h' }
+        );
 
-        await sendVerificationEmail(email, verificationCode)
+        res.cookie('VerificationToken', tokenCode, { maxAge: 2 * 60 * 60 * 1000, httpOnly: true });
 
-        res.json({message: 'Client register, please verify your email with the code'})
+        await sendVerificationEmail(email, verificationCode);
 
-    } catch{
-        console.log('error: '+ error)
-        res.status(500).json({message: 'Hubo un error en el registro'})
+        res.json({ message: 'Client registered, please verify your email with the code' });
+
+    } catch (error) {
+        console.log('Error: ' + error);
+        res.status(500).json({ message: 'Hubo un error en el registro: ' + error.message });
     }
-}
+};
 
-registerControl.verificationCodeEmail = async (req, res)=>{
-    const {requirecode} = req.body
-    const token = req.cookie.verificationCode
 
-    try{
-        console.log('JWT Secret: ', config.JWT.secret)
-        const decode = jsonwebtoken.verify(token, config.JWT.secret)
-        const {email, verificationCode: storedCode} = decode
+registerControl.verificationCodeEmail = async (req, res) => {
+    const { requirecode } = req.body;
+    const token = req.cookies.VerificationToken;  
 
-        if(requirecode !== storedCode){ return res.json ({message: "Invalid code"}) }
-        const client = await registerModel.findOne({email})
-        client.isVerified = true
-        await client.save()
+    try {
+        if (!token) {
+            return res.status(400).json({ message: "Token not found" });
+        }
 
-        res.clearCookie('verificationToken')
-        res.json({message:'Email verified Successfuly'})
+        console.log("Received Token:", token); 
+        console.log("JWT Secret:", config.JWT.secret); 
 
-    } catch{
-        console.log("Error: " + error) 
+        const decode = jsonwebtoken.verify(token, config.JWT.secret);
+        console.log("Decoded Token:", decode); 
+        const { email, verificationCode: storedCode } = decode;
+
+        console.log("Stored Code from Token:", storedCode); 
+        console.log("Code entered by user:", requirecode); 
+
+        if (requirecode !== storedCode) {
+            return res.json({ message: "Invalid code" });
+        }
+
+        await registerModel.findOneAndUpdate(
+            { email },
+            { isVerified: true },
+            { new: true }
+        );
+
+        res.clearCookie("VerificationToken");
+        res.json({ message: "Email verified successfully" });
+
+    } catch (error) {
+        console.log("Error:", error);
+        res.status(500).json({ message: "Hubo un error en la verificación: " + error.message });
     }
-}
+};
+
 export default registerControl
