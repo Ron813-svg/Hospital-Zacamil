@@ -1,6 +1,6 @@
 import doctorModel from '../models/Doctor.js'
 import bcryptjs from 'bcryptjs'
-import  hsonWebToken  from 'jsonwebtoke'
+import  jsonWebToken  from 'jsonwebtoken'
 import { config } from '../config.js'
 
 const loginControl = {}
@@ -14,7 +14,7 @@ loginControl.login = async (req, res) => {
         const isMatch = await bcryptjs.compare(password, doctor.password)
         if (!isMatch) return res.status(400).json({ message: 'La contraseña es incorrecta' })
 
-        hsonWebToken.sign(
+        jsonWebToken.sign(
             { id: doctor._id },
             config.JWT.secret,
             { expiresIn: config.JWT.expiresIn },

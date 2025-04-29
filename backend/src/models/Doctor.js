@@ -1,6 +1,5 @@
-import { strict } from 'assert'
 import {Schema,model} from 'mongoose'
-import { type } from 'os'
+
 
 const doctorSchema = Schema({
     name: {
