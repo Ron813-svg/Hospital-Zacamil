@@ -1,27 +1,16 @@
-import express from 'express';
-import cors from 'cors';
-import { config } from './src/config.js';
-import './database.js';
-import loginControl from './src/controller/loginControl.js'
+import app from './app.js'
 
-const app = express();
+import './database.js'
+import dotenv from 'dotenv'
 
-app.use(express.json());
+dotenv.config
 
-const corsOptions = {
-    origin: 'http://localhost:5173', 
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true 
-};
-
-app.use(cors(corsOptions));
-
-app.post('/api/login', loginControl.login);
+import { config } from './src/config.js'
 
 async function main() {
-    app.listen(config.server.port);
-    console.log(`El servidor está encendido en el puerto ${config.server.port}`);
+    const port = config.server.port
+    app.listen(port)
+    console.log('Server on port: ', port)
 }
 
 main();

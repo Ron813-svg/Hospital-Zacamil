@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-
+import Alerta from '../components/Alerta.jsx';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 const Login = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showAlert, setShowAlert] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,17 +22,21 @@ const Login = () => {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        console.log('Login exitoso:', data);
-        alert('¡Se ha iniciado sesión correctamente!, Bienvenido ' + email);
-        navigate('/');
+        setShowAlert(true);
+        setTimeout(() => {
+          setShowAlert(false);
+          navigate('/inicio'); // Redirigir a la página de inicio
+        }, 4000);
       } else {
         throw new Error('Credenciales incorrectas');
       }
     } catch (error) {
-      console.error(error);
       alert('Error al iniciar sesión. Por favor, revisa tus credenciales.');
     }
+  };
+
+  const handleRegister = () => {
+    navigate('/register'); // Redirige a la página de registro
   };
 
   return (
@@ -41,6 +46,7 @@ const Login = () => {
           <h5 className="mb-0">Iniciar sesión</h5>
         </div>
         <div className="card-body">
+          {showAlert && <Alerta mensaje={`¡Se ha iniciado sesión correctamente!, Bienvenido ${email}`} />}
           <form onSubmit={handleSubmit}>
             <div className="mb-3">
               <label htmlFor="email" className="form-label">Correo Electrónico:</label>
@@ -70,9 +76,11 @@ const Login = () => {
             </div>
             <button type="submit" className="btn btn-primary w-100">Iniciar sesión</button>
           </form>
-        </div>
-        <div className="card-footer text-center">
-          <small className="text-muted">¿Olvidaste tu contraseña?</small>
+          <div className="mt-3">
+            <button type="button" className="btn btn-secondary w-100" onClick={handleRegister}>
+              Registrarse
+            </button>
+          </div>
         </div>
       </div>
     </div>
